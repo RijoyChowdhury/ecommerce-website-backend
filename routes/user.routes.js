@@ -1,12 +1,18 @@
 import { Router } from "express";
-import {registerUserController, verifyEmailController} from '../controllers/user.controllers.js';
+import {
+    registerUserController, 
+    verifyEmailController, 
+    loginController, 
+    logoutController,
+} from '../controllers/user.controllers.js';
+import { auth } from "../middleware/auth.middleware.js";
 
 const router = Router();
 
 router.post('/register',registerUserController);
 router.post('/verify-email' ,verifyEmailController);
-// router.post('/login' ,loginController);
-// router.get('/logout', auth, logoutController);
+router.post('/login' ,loginController);
+router.get('/logout', auth, logoutController);
 // router.put('/upload-avatar', auth, upload. single('avatar'),uploadAvatar);
 // router.put('/update-user', auth, updateUserDetails);
 // router.put('/forgot-password', forgotPasswordController);
