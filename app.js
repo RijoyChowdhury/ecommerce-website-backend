@@ -4,8 +4,9 @@ import dotenv from 'dotenv';
 import cookieParser from 'cookie-parser';
 import morgan from 'morgan';
 import helmet from 'helmet';
-import createHttpError from 'http-errors';
+import createError from 'http-errors';
 import {connectDB} from './utils/connectDB.js';
+import appRouter from './routes/index.js';
 
 dotenv.config();
 
@@ -26,7 +27,11 @@ app.use(helmet({
 
 const PORT = process.env.PORT ?? 3000;
 
-app.get('/', (req, res) => {
+// api routes
+app.use("/api", appRouter);
+
+// server healthcheck
+app.get('/healthcheck', (req, res) => {
     res.json({
         status: 200,
         message: 'Success',
@@ -35,15 +40,18 @@ app.get('/', (req, res) => {
 
 // on route not found
 app.use(function (req, res, next) {
-    next(createHttpError(404, 'Route not found!'));
+    next(createError.NotFound('Route not found!'));
 });
 
 // error handler
 app.use(function (err, req, res, next) {
-    res.status(err.status || 500);
+    const {message, status} = err;
+    res.status(status || 500);
     res.json({
-        status: 'Failure',
-        message: err.message,
+        status: 'failure',
+        message,
+        error: true, 
+        success: false
     });
 });
 
