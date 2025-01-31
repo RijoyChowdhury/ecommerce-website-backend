@@ -26,7 +26,7 @@ const userSchema = new mongoose.Schema({
         type: String,
         default: '',
     },
-    verified_email: {
+    isVerified: {
         type: Boolean,
         default: false,
     },
@@ -57,14 +57,22 @@ const userSchema = new mongoose.Schema({
             ref: 'order',
         }
     ],
-    forgot_password_otp: {
+    otp: {
         type: String,
         default: null,
     },
-    forgot_password_expiry: {
+    otp_expiry: {
         type: Date,
         default: '',
     },
+    // forgot_password_otp: {
+    //     type: String,
+    //     default: null,
+    // },
+    // forgot_password_expiry: {
+    //     type: Date,
+    //     default: '',
+    // },
     role: {
         type: String,
         enum: ['Admin', 'User'],

@@ -32,8 +32,9 @@ app.use("/api", appRouter);
 
 // server healthcheck
 app.get('/healthcheck', (req, res) => {
-    res.json({
-        status: 200,
+    res.status(200).json({
+        success: true,
+        error: false,
         message: 'Success',
     });
 });
