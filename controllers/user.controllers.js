@@ -319,7 +319,31 @@ const resetPasswordController = async (req, res, next) => {
 
 const refreshTokenController = async (req, res, next) => {
     try {
-        
+        const refreshToken = req.cookies.refreshToken || req?.headers?.authorization?.split(' ')[1];
+        if (!refreshToken) {
+            throw createError.BadRequest('Invalid token');
+        }
+
+        const verifyToken = await jwt.verify(refreshToken, process.env.SECRET_KEY_REFRESH_TOKEN);
+        if (!verifyToken) {
+            throw createError.BadRequest('Invalid token');
+        }
+
+        const userId = verifyToken.id;
+        const newAccessToken = generateAccessToken(userId);
+        const cookieOption = {
+            httpOnly: true,
+            secure: true,
+            sameSite: 'None',
+        };
+
+        res.cookie('accessToken', newAccessToken, cookieOption);
+
+        res.status(200).json({
+            success: true,
+            error: false,
+            message: 'Access token generated',
+        });
     } catch (err) {
         next(err);
     }
@@ -327,7 +351,14 @@ const refreshTokenController = async (req, res, next) => {
 
 const userDetailsController = async (req, res, next) => {
     try {
-        
+        const userId = req.userId;
+        const user = await UserModel.findById(userId).select('-password -refresh_token');
+        res.status(200).json({
+            success: true,
+            error: false,
+            data: user,
+            message: 'User details'
+        });
     } catch (err) {
         next(err);
     }
