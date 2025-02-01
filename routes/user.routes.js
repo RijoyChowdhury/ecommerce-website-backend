@@ -4,6 +4,7 @@ import {
     verifyEmailController, 
     loginController, 
     logoutController,
+    updateUserDetails,
     userAvatarUploadController,
     removeImageFromCloudinaryController,
 } from '../controllers/user.controllers.js';
@@ -18,7 +19,7 @@ router.post('/login' ,loginController);
 router.get('/logout', auth, logoutController);
 router.put('/upload-avatar', auth, upload.array('avatar'), userAvatarUploadController);
 router.delete('/delete-image', auth, removeImageFromCloudinaryController);
-// router.put('/update-user', auth, updateUserDetails);
+router.put('/:id', auth, updateUserDetails);
 // router.put('/forgot-password', forgotPasswordController);
 // router.put('/verify-forgot-password-otp' ,verifyForgotPasswordOtp);
 // router.put('/reset-password',resetpassword);

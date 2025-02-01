@@ -163,6 +163,61 @@ const logoutController = async (req, res, next) => {
     }
 }
 
+const updateUserDetails = async (req, res, next) => {
+    try {
+        const userId = req.userId; // from auth middleware
+        const {name, email, mobile, password} = req.body;
+        const user = await UserModel.findById(userId);
+
+        if (!user) {
+            throw createError.NotFound('User not found');
+        }
+
+        let verifyCode = '';
+        if (email && email !== user.email) {
+            verifyCode = Math.floor(100000 + Math.random() * 900000).toString();
+        }
+
+        let hashedPassword = '';
+        if (password) {
+            const salt = await bcrypt.genSalt(10);
+            hashedPassword = await bcrypt.hash(password, salt);
+        } else {
+            hashedPassword = user.password;
+        }
+
+        const updateUser = await UserModel.findByIdAndUpdate(userId, {
+            name,
+            mobile,
+            email,
+            isVerified: email && email !== user.email ? false : true,
+            password: hashedPassword,
+            otp: verifyCode !== '' ? verifyCode : null,
+            otp_expiry: verifyCode !== '' ? Date.now() + 600000 : '',
+        }, {
+            new: true,
+        });
+
+        // send verification mail
+        // if (email && email !== user.email) {
+        //     const verifyEmail = await sendEmail({
+        //         sendTo: email,
+        //         subject: 'Verify email account',
+        //         text: '',
+        //         html: generateVerificationEmailTemplate(name, verificationCode),
+        //     });
+        // }
+
+        res.status(200).json({
+            success: true,
+            error: false,
+            message: 'User details update successful',
+        });
+    } catch (err) {
+        next(err);
+    }
+}
+
 let imageArray = new Array();
 const userAvatarUploadController = async (req, res, next) => {
     try {
@@ -244,6 +299,7 @@ export {
     verifyEmailController,
     loginController,
     logoutController,
+    updateUserDetails,
     userAvatarUploadController,
     removeImageFromCloudinaryController,
 };
