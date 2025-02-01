@@ -4,7 +4,10 @@ import {
     verifyEmailController, 
     loginController, 
     logoutController,
-    updateUserDetails,
+    updateUserDetailsController,
+    forgotPasswordController,
+    verifyForgotPasswordOtp,
+    resetPasswordController,
     userAvatarUploadController,
     removeImageFromCloudinaryController,
 } from '../controllers/user.controllers.js';
@@ -13,17 +16,17 @@ import upload from "../middleware/multer.middleware.js";
 
 const router = Router();
 
-router.post('/register',registerUserController);
-router.post('/verify-email' ,verifyEmailController);
-router.post('/login' ,loginController);
+router.post('/register', registerUserController);
+router.post('/verify-email', verifyEmailController);
+router.post('/login', loginController);
 router.get('/logout', auth, logoutController);
 router.put('/upload-avatar', auth, upload.array('avatar'), userAvatarUploadController);
 router.delete('/delete-image', auth, removeImageFromCloudinaryController);
-router.put('/:id', auth, updateUserDetails);
-// router.put('/forgot-password', forgotPasswordController);
-// router.put('/verify-forgot-password-otp' ,verifyForgotPasswordOtp);
-// router.put('/reset-password',resetpassword);
-// router.post('/refresh-token',refreshToken);
-// router.get('/user-details',auth, userDetails);
+router.put('/update-details', auth, updateUserDetailsController);
+router.post('/forgot-password', forgotPasswordController);
+router.post('/verify-forgot-password-otp', verifyForgotPasswordOtp);
+router.post('/reset-password', resetPasswordController);
+// router.post('/refresh-token', refreshTokenController);
+// router.get('/user-details', auth, userDetailsController);
 
 export default router;

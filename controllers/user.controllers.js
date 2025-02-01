@@ -71,7 +71,7 @@ const verifyEmailController = async (req, res, next) => {
             throw createError.NotFound('User not found');
         }
         const isCodeValid = user.otp === otp;
-        const isNotExpired = user.otp_expiry > Date.now();
+        const isNotExpired = user.otp_expiry > new Date().toISOString();
 
         if (isCodeValid && isNotExpired) {
             user.isVerified = true;
@@ -163,7 +163,7 @@ const logoutController = async (req, res, next) => {
     }
 }
 
-const updateUserDetails = async (req, res, next) => {
+const updateUserDetailsController = async (req, res, next) => {
     try {
         const userId = req.userId; // from auth middleware
         const {name, email, mobile, password} = req.body;
@@ -213,6 +213,121 @@ const updateUserDetails = async (req, res, next) => {
             error: false,
             message: 'User details update successful',
         });
+    } catch (err) {
+        next(err);
+    }
+}
+
+const forgotPasswordController = async (req, res, next) => {
+    try {
+        const {email} = req.body;
+        const user = await UserModel.findOne({email});
+        if (!user) {
+            throw createError.NotFound('User not found');
+        }
+        const otp = Math.floor(100000 + Math.random() * 900000).toString();
+        const otp_expiry = new Date() + 60 * 60 * 1000;
+
+        const updateUser = await UserModel.findByIdAndUpdate(user._id, {
+            otp,
+            otp_expiry,
+        }, {
+            new: true,
+        });
+
+        // send verification mail
+        // if (email && email !== user.email) {
+        //     const verifyEmail = await sendEmail({
+        //         sendTo: email,
+        //         subject: 'Verify email account',
+        //         text: '',
+        //         html: generateVerificationEmailTemplate(user.name, verificationCode),
+        //     });
+        // }
+
+        res.status(200).json({
+            success: true,
+            error: false,
+            message: 'OTP sent',
+        });
+    } catch (err) {
+        next(err);
+    }
+}
+
+const verifyForgotPasswordOtp = async (req, res, next) => {
+    try {
+        const {email, otp} = req.body;
+
+        if (!email || !otp) {
+            throw createError.Conflict('Email/OTP cannot be empty');
+        }
+
+        const user = await UserModel.findOne({email});
+        if (!user) {
+            throw createError.NotFound('User not found');
+        }
+
+        if (user.otp !== otp || user.otp_expiry < new Date().toISOString()) {
+            throw createError.Forbidden('Invalid OTP');
+        }
+
+        user.otp = null;
+        user.otp_expiry = '';
+        await user.save();
+
+        res.status(200).json({
+            success: true,
+            error: false,
+            message: 'OTP verified',
+        });
+    } catch (err) {
+        next(err);
+    }
+}
+
+const resetPasswordController = async (req, res, next) => {
+    try {
+        const {email, newPassword, confirmPassword} = req.body;
+        if (!email || !newPassword || !confirmPassword) {
+            throw createError.Conflict('Email/New Password/Confirm Password cannot be empty');
+        }
+        if (newPassword !== confirmPassword) {
+            throw createError.Conflict('New Password and Confirm Password must match');
+        }
+
+        const user = await UserModel.findOne({email});
+        if (!user) {
+            throw createError.NotFound('User not found');
+        }
+
+        const salt = await bcrypt.genSalt(10);
+        const hashedPassword = await bcrypt.hash(newPassword, salt);
+
+        user.password = hashedPassword;
+        await user.save();
+
+        res.status(200).json({
+            success: true,
+            error: false,
+            message: 'Password update successful',
+        });
+    } catch (err) {
+        next(err);
+    }
+}
+
+const refreshTokenController = async (req, res, next) => {
+    try {
+        
+    } catch (err) {
+        next(err);
+    }
+}
+
+const userDetailsController = async (req, res, next) => {
+    try {
+        
     } catch (err) {
         next(err);
     }
@@ -299,7 +414,12 @@ export {
     verifyEmailController,
     loginController,
     logoutController,
-    updateUserDetails,
+    updateUserDetailsController,
+    forgotPasswordController,
+    verifyForgotPasswordOtp,
+    resetPasswordController,
+    refreshTokenController,
+    userDetailsController,
     userAvatarUploadController,
     removeImageFromCloudinaryController,
 };
