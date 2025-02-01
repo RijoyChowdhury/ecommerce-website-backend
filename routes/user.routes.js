@@ -4,8 +4,11 @@ import {
     verifyEmailController, 
     loginController, 
     logoutController,
+    userAvatarUploadController,
+    removeImageFromCloudinaryController,
 } from '../controllers/user.controllers.js';
 import { auth } from "../middleware/auth.middleware.js";
+import upload from "../middleware/multer.middleware.js";
 
 const router = Router();
 
@@ -13,7 +16,8 @@ router.post('/register',registerUserController);
 router.post('/verify-email' ,verifyEmailController);
 router.post('/login' ,loginController);
 router.get('/logout', auth, logoutController);
-// router.put('/upload-avatar', auth, upload. single('avatar'),uploadAvatar);
+router.put('/upload-avatar', auth, upload.array('avatar'), userAvatarUploadController);
+router.delete('/delete-image', auth, removeImageFromCloudinaryController);
 // router.put('/update-user', auth, updateUserDetails);
 // router.put('/forgot-password', forgotPasswordController);
 // router.put('/verify-forgot-password-otp' ,verifyForgotPasswordOtp);
