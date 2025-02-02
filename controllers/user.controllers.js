@@ -15,28 +15,35 @@ cloudinary.config({
     secure: true,
 });
 
+const generateVerificationCode = () => Math.floor(100000 + Math.random() * 900000).toString();
+
+const encryptData = async (data) => {
+    const salt = await bcrypt.genSalt(10);
+    return await bcrypt.hash(data, salt);
+};
+
 const registerUserController = async (req, res, next) => {
     try {
         const { name, email, password } = req.body;
         if (!name || !email || !password) {
-            throw createError.NotFound('Name, email or password cannot be empty');
+            throw createError.BadRequest('Name, email or password cannot be empty');
         }
         const user = await UserModel.findOne({ email });
         if (user) {
-            throw createError.Conflict('Email already registered');
+            throw createError.BadRequest('Email already registered');
         }
 
-        const verificationCode = Math.floor(100000 + Math.random() * 900000).toString();
-
-        const salt = await bcrypt.genSalt(10);
-        const hashedPassword = await bcrypt.hash(password, salt);
+        const verificationCode = generateVerificationCode();
+        const hashedPassword = await encryptData(password);
+        
         const payload = {
             name,
             email,
             password: hashedPassword,
             otp: verificationCode,
-            otp_expiry: Date.now() + 600000, // expires in 5 mins
+            otp_expiry: Date.now() + 10 * 60 * 1000, // expires in 10 mins
         };
+        
         const newUser = new UserModel(payload);
         await newUser.save();
 
@@ -47,16 +54,10 @@ const registerUserController = async (req, res, next) => {
         //     html: generateVerificationEmailTemplate(name, verificationCode),
         // });
 
-        const token = jwt.sign({
-            email,
-            id: newUser._id,
-        }, process.env.JSON_WEB_TOKEN_SECRET_KEY);
-
         res.status(200).json({
             success: true,
             error: false,
             message: 'User created.',
-            token: token,
         });
     } catch (err) {
         next(err);
@@ -70,8 +71,9 @@ const verifyEmailController = async (req, res, next) => {
         if (!user) {
             throw createError.NotFound('User not found');
         }
+        
         const isCodeValid = user.otp === otp;
-        const isNotExpired = user.otp_expiry > new Date().toISOString();
+        const isNotExpired = user.otp_expiry > Date.now();
 
         if (isCodeValid && isNotExpired) {
             user.isVerified = true;
@@ -85,9 +87,9 @@ const verifyEmailController = async (req, res, next) => {
                 message: 'Email verified',
             });
         } else if (!isCodeValid) {
-            throw createError.Conflict('OTP not valid');
+            throw createError.BadRequest('OTP not valid');
         } else {
-            throw createError.Conflict('OTP expired');
+            throw createError.BadRequest('OTP expired');
         }
     } catch (err) {
         next(err);
@@ -102,7 +104,7 @@ const loginController = async (req, res, next) => {
             throw createError.NotFound('User not found');
         }
         if (user.status !== 'Active') {
-            throw createError.NotFound('Contact Admin');
+            throw createError.NotFound('Account not active');
         }
 
         const isSamePassword = await bcrypt.compare(password, user.password);
@@ -114,7 +116,7 @@ const loginController = async (req, res, next) => {
         const refresh_token = await generateRefreshToken(user._id);
 
         user.last_login_date = new Date();
-        const updateUser = await user.save();
+        await user.save();
 
         const cookieOption = {
             httpOnly: true,
@@ -128,10 +130,6 @@ const loginController = async (req, res, next) => {
             success: true,
             error: false,
             message: 'Login successful',
-            data: {
-                access_token,
-                refresh_token,
-            }
         });
     } catch (err) {
         next(err);
@@ -149,7 +147,7 @@ const logoutController = async (req, res, next) => {
         res.clearCookie('accessToken', cookieOption);
         res.clearCookie('refreshToken', cookieOption);
 
-        const updateUserRefreshToken = await UserModel.findByIdAndUpdate(userId, {
+        await UserModel.findByIdAndUpdate(userId, {
             refresh_token: '',
         });
 
@@ -175,25 +173,24 @@ const updateUserDetailsController = async (req, res, next) => {
 
         let verifyCode = '';
         if (email && email !== user.email) {
-            verifyCode = Math.floor(100000 + Math.random() * 900000).toString();
+            verifyCode = generateVerificationCode();
         }
 
         let hashedPassword = '';
         if (password) {
-            const salt = await bcrypt.genSalt(10);
-            hashedPassword = await bcrypt.hash(password, salt);
+            hashedPassword = await encryptData(password);
         } else {
             hashedPassword = user.password;
         }
 
-        const updateUser = await UserModel.findByIdAndUpdate(userId, {
+        await UserModel.findByIdAndUpdate(userId, {
             name,
             mobile,
             email,
             isVerified: email && email !== user.email ? false : true,
             password: hashedPassword,
             otp: verifyCode !== '' ? verifyCode : null,
-            otp_expiry: verifyCode !== '' ? Date.now() + 600000 : '',
+            otp_expiry: verifyCode !== '' ? Date.now() + 10 * 60 * 1000 : '', // expires in 10 mins
         }, {
             new: true,
         });
@@ -218,6 +215,21 @@ const updateUserDetailsController = async (req, res, next) => {
     }
 }
 
+const userDetailsController = async (req, res, next) => {
+    try {
+        const userId = req.userId;
+        const user = await UserModel.findById(userId).select('-password -refresh_token -otp -otp_expiry');
+        res.status(200).json({
+            success: true,
+            error: false,
+            data: user,
+            message: 'User details'
+        });
+    } catch (err) {
+        next(err);
+    }
+}
+
 const forgotPasswordController = async (req, res, next) => {
     try {
         const {email} = req.body;
@@ -225,8 +237,8 @@ const forgotPasswordController = async (req, res, next) => {
         if (!user) {
             throw createError.NotFound('User not found');
         }
-        const otp = Math.floor(100000 + Math.random() * 900000).toString();
-        const otp_expiry = new Date() + 60 * 60 * 1000;
+        const otp = generateVerificationCode();
+        const otp_expiry = Date.now() + 60 * 60 * 1000; // expires in 1 hour
 
         const updateUser = await UserModel.findByIdAndUpdate(user._id, {
             otp,
@@ -268,7 +280,7 @@ const verifyForgotPasswordOtp = async (req, res, next) => {
             throw createError.NotFound('User not found');
         }
 
-        if (user.otp !== otp || user.otp_expiry < new Date().toISOString()) {
+        if (user.otp !== otp || user.otp_expiry < Date.now()) {
             throw createError.Forbidden('Invalid OTP');
         }
 
@@ -301,9 +313,7 @@ const resetPasswordController = async (req, res, next) => {
             throw createError.NotFound('User not found');
         }
 
-        const salt = await bcrypt.genSalt(10);
-        const hashedPassword = await bcrypt.hash(newPassword, salt);
-
+        const hashedPassword = await encryptData(newPassword);
         user.password = hashedPassword;
         await user.save();
 
@@ -343,21 +353,6 @@ const refreshTokenController = async (req, res, next) => {
             success: true,
             error: false,
             message: 'Access token generated',
-        });
-    } catch (err) {
-        next(err);
-    }
-}
-
-const userDetailsController = async (req, res, next) => {
-    try {
-        const userId = req.userId;
-        const user = await UserModel.findById(userId).select('-password -refresh_token');
-        res.status(200).json({
-            success: true,
-            error: false,
-            data: user,
-            message: 'User details'
         });
     } catch (err) {
         next(err);

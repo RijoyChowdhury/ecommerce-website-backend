@@ -20,15 +20,20 @@ const router = Router();
 
 router.post('/register', registerUserController);
 router.post('/verify-email', verifyEmailController);
+
 router.post('/login', loginController);
 router.get('/logout', auth, logoutController);
-router.put('/upload-avatar', auth, upload.array('avatar'), userAvatarUploadController);
-router.delete('/delete-image', auth, removeImageFromCloudinaryController);
-router.put('/update-details', auth, updateUserDetailsController);
+
+router.put('/update', auth, updateUserDetailsController);
+router.get('/details', auth, userDetailsController);
+
 router.post('/forgot-password', forgotPasswordController);
 router.post('/verify-forgot-password-otp', verifyForgotPasswordOtp);
 router.post('/reset-password', resetPasswordController);
+
 router.post('/refresh-token', refreshTokenController);
-router.get('/user-details', auth, userDetailsController);
+
+router.put('/upload-avatar', auth, upload.array('avatar'), userAvatarUploadController);
+router.delete('/delete-avatar', auth, removeImageFromCloudinaryController);
 
 export default router;
