@@ -33,7 +33,7 @@ router.post('/reset-password', resetPasswordController);
 
 router.post('/refresh-token', refreshTokenController);
 
-router.put('/upload-avatar', auth, upload.array('avatar'), userAvatarUploadController);
+router.put('/upload-avatar', auth, upload.single('avatar'), userAvatarUploadController);
 router.delete('/delete-avatar', auth, removeImageFromCloudinaryController);
 
 export default router;

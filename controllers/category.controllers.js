@@ -10,6 +10,7 @@ cloudinary.config({
     secure: true,
 });
 
+// utility function
 const createNestedCategories = (categories, parentId = null) => {
     const categoryList = new Array();
     let category;
@@ -23,7 +24,7 @@ const createNestedCategories = (categories, parentId = null) => {
         categoryList.push({
             _id: cat._id,
             name: cat.name,
-            children: nestedCategories(categories, cat._id),
+            children: createNestedCategories(categories, cat._id),
         });
     }
 
