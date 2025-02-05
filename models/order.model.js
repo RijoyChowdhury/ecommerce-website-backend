@@ -1,7 +1,7 @@
 import mongoose from "mongoose";
 
 const orderSchema = new mongoose.Schema({
-    userId: {
+    user: {
         type: mongoose.Schema.ObjectId,
         ref: 'user',
     },
@@ -10,7 +10,7 @@ const orderSchema = new mongoose.Schema({
         required: [true, 'orderId field cannot be empty'],
         unique: true,
     },
-    productId: {
+    product: {
         type: mongoose.Schema.ObjectId,
         ref: 'product',
     },
@@ -46,6 +46,6 @@ const orderSchema = new mongoose.Schema({
     timestamps: true,
 });
 
-const OrderModel = mongoose.model(orderSchema);
+const OrderModel = mongoose.model('order', orderSchema);
 
 export default OrderModel;
