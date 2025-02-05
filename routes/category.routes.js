@@ -13,6 +13,7 @@ import {
 const router = Router();
 
 router.post('/upload', auth, upload.array('images'), uploadCategoryImagesController);
+
 router.post('/create', auth, createCategoryController);
 router.get('/:id', getCategoryDetailsController);
 router.get('/', getCategoryListController);

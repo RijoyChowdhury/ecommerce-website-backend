@@ -112,8 +112,8 @@ const loginController = async (req, res, next) => {
             throw createError.NotFound('Wrong credentials');
         }
 
-        const access_token = await generateAccessToken(user._id);
-        const refresh_token = await generateRefreshToken(user._id);
+        const access_token = await generateAccessToken(user._id, user.role);
+        const refresh_token = await generateRefreshToken(user._id, user.role);
 
         user.last_login_date = new Date();
         await user.save();
@@ -223,7 +223,7 @@ const userDetailsController = async (req, res, next) => {
             success: true,
             error: false,
             data: user,
-            message: 'User details'
+            message: 'User details',
         });
     } catch (err) {
         next(err);
