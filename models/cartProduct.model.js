@@ -1,7 +1,7 @@
 import mongoose from "mongoose";
 
 const cartProductSchema = new mongoose.Schema({
-    productId: {
+    product: {
         type: mongoose.Schema.ObjectId,
         ref: 'product',
     },
@@ -9,15 +9,15 @@ const cartProductSchema = new mongoose.Schema({
         type: Number,
         default: 1,
     },
-    size_variant: {
+    size: {
         type: String,
         default: null,
     },
-    color_variant: {
+    color: {
         type: String,
         default: null,
     },
-    userId: {
+    user: {
         type: mongoose.Schema.ObjectId,
         ref: 'user',
     },
@@ -25,6 +25,14 @@ const cartProductSchema = new mongoose.Schema({
     timestamps: true,
 });
 
-const CartProductModel = mongoose.model(cartProductSchema);
+// cartProductSchema.virtual('id').get(function () {
+//     this._id.toHexString();
+// });
+
+// cartProductSchema.set('toJSON', {
+//     virtuals: true,
+// });
+
+const CartProductModel = mongoose.model('cartProduct', cartProductSchema);
 
 export default CartProductModel;
