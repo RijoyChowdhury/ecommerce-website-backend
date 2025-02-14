@@ -1,6 +1,10 @@
 import mongoose from "mongoose";
 
 const userSchema = new mongoose.Schema({
+    userPrefix: {
+        type: String,
+        required: [true, 'name prefix field cannot be empty'],
+    },
     name: {
         type: String,
         required: [true, 'name field cannot be empty'],

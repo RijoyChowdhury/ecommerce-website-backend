@@ -23,6 +23,7 @@ router.post('/verify-email', verifyEmailController);
 
 router.post('/login', loginController);
 router.get('/logout', auth, logoutController);
+router.get('/re-login', auth, userDetailsController);
 
 router.put('/update', auth, updateUserDetailsController);
 router.get('/details', auth, userDetailsController);
