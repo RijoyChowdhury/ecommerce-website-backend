@@ -1,7 +1,11 @@
 import mongoose from "mongoose";
 
 const addressSchema = new mongoose.Schema({
-    address_line : {
+    address_line_1 : {
+        type: String,
+        default: '',
+    },
+    address_line_2 : {
         type: String,
         default: '',
     },
@@ -27,9 +31,14 @@ const addressSchema = new mongoose.Schema({
         type: Boolean,
         default: true,
     },
-    userId: {
+    location_type: {
+        type: String,
+        enum: ['home', 'office'],
+        default: 'home',
+    },
+    user: {
         type: mongoose.Schema.ObjectId,
-        default: ''
+        ref: 'user',
     },
 }, {
     timestamps: true,

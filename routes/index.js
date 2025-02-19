@@ -5,6 +5,7 @@ import productRouter from './product.routes.js';
 import cartRouter from './cart.routes.js';
 import wishlistRouter from './wishlist.routes.js';
 import imageRouter from './image.routes.js';
+import addressRouter from './address.routes.js';
 
 const router = Router();
 
@@ -14,5 +15,6 @@ router.use('/product', productRouter);
 router.use('/cart', cartRouter);
 router.use('/wishlist', wishlistRouter);
 router.use('/image', imageRouter);
+router.use('/address', addressRouter);
 
 export default router;
