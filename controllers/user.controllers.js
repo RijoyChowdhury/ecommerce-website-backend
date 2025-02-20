@@ -24,9 +24,9 @@ const encryptData = async (data) => {
 
 const registerUserController = async (req, res, next) => {
     try {
-        const { name, email, password } = req.body;
-        if (!name || !email || !password) {
-            throw createError.BadRequest('Name, email or password cannot be empty');
+        const { firstName, lastName, email, password } = req.body;
+        if (!firstName || !lastName || !email || !password) {
+            throw createError.BadRequest('First name, last name, email or password cannot be empty');
         }
         const user = await UserModel.findOne({ email });
         if (user) {
@@ -37,7 +37,8 @@ const registerUserController = async (req, res, next) => {
         const hashedPassword = await encryptData(password);
         
         const payload = {
-            name,
+            firstName, 
+            lastName,
             email,
             password: hashedPassword,
             otp: verificationCode,
@@ -51,7 +52,7 @@ const registerUserController = async (req, res, next) => {
         //     sendTo: email,
         //     subject: 'Verify email account',
         //     text: '',
-        //     html: generateVerificationEmailTemplate(name, verificationCode),
+        //     html: generateVerificationEmailTemplate(`${firstName} ${lastName}`, verificationCode),
         // });
 
         res.status(200).json({
@@ -164,7 +165,7 @@ const logoutController = async (req, res, next) => {
 const updateUserDetailsController = async (req, res, next) => {
     try {
         const userId = req.userId; // from auth middleware
-        const {name, email, mobile, password} = req.body;
+        const {firstName, lastName, email, mobile, password} = req.body;
         const user = await UserModel.findById(userId);
 
         if (!user) {
@@ -184,7 +185,8 @@ const updateUserDetailsController = async (req, res, next) => {
         }
 
         await UserModel.findByIdAndUpdate(userId, {
-            name,
+            firstName, 
+            lastName,
             mobile,
             email,
             isVerified: email && email !== user.email ? false : true,

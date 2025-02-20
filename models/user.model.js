@@ -5,9 +5,13 @@ const userSchema = new mongoose.Schema({
         type: String,
         required: [true, 'name prefix field cannot be empty'],
     },
-    name: {
+    firstName: {
         type: String,
-        required: [true, 'name field cannot be empty'],
+        required: [true, 'first name field cannot be empty'],
+    },
+    lastName: {
+        type: String,
+        required: [true, 'last name field cannot be empty'],
     },
     email: {
         type: String,
