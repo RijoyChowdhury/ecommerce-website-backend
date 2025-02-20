@@ -6,15 +6,14 @@ const addAddressController = async (req, res, next) => {
     try {
         const userId = req.userId; // from auth middleware
         const {
-            address_line_1, 
-            address_line_2, 
+            address_line_1,
+            address_line_2,
             city,
             state,
             country,
             pincode,
             mobile,
             location_type,
-            status,
         } = req.body;
 
         if (!address_line_1 || !country || !pincode || !mobile) {
@@ -27,21 +26,21 @@ const addAddressController = async (req, res, next) => {
         }
 
         const payload = {
-            address_line_1, 
-            address_line_2, 
+            address_line_1,
+            address_line_2,
             city,
             state,
             country,
             pincode,
             mobile,
             location_type,
-            status,
+            status: user.address.length === 0,
             user: userId,
         };
         const newAddress = new AddressModel(payload);
         await newAddress.save();
 
-        const updateUser = await UserModel.updateOne({_id: userId}, {
+        const updateUser = await UserModel.updateOne({ _id: userId }, {
             $push: {
                 address: newAddress._id,
             }
@@ -64,17 +63,16 @@ const addAddressController = async (req, res, next) => {
 const updateAddressController = async (req, res, next) => {
     try {
         const userId = req.userId; // from auth middleware
+        const addressId = req.params.id;
         const {
-            address_line_1, 
-            address_line_2, 
+            address_line_1,
+            address_line_2,
             city,
             state,
             country,
             pincode,
             mobile,
             location_type,
-            status,
-            id,
         } = req.body;
 
         const user = await UserModel.findById(userId);
@@ -82,21 +80,20 @@ const updateAddressController = async (req, res, next) => {
             throw createError.NotFound('User not found');
         }
 
-        const address = await AddressModel.findById(id);
+        const address = await AddressModel.findById(addressId);
         if (!address) {
             throw createError.NotFound('Address not found');
         }
 
-        await AddressModel.findByIdAndUpdate(id, {
-            address_line_1, 
-            address_line_2, 
+        await AddressModel.findByIdAndUpdate(addressId, {
+            address_line_1,
+            address_line_2,
             city,
             state,
             country,
             pincode,
             mobile,
             location_type,
-            status,
         }, {
             new: true,
         });
@@ -115,7 +112,7 @@ const getAddressController = async (req, res, next) => {
     try {
         const userId = req.userId; // from auth middleware
         const addressId = req.params.id;
-        
+
         const user = await UserModel.findById(userId);
         if (!user) {
             throw createError.NotFound('User not found');
@@ -161,9 +158,102 @@ const getAllAddressController = async (req, res, next) => {
     }
 }
 
+const toggleActiveAddressController = async (req, res, next) => {
+    try {
+        const userId = req.userId; // from auth middleware
+        const addressId = req.params.id;
+
+        const user = await UserModel.findById(userId);
+        if (!user) {
+            throw createError.NotFound('User not found');
+        }
+
+        const address = await AddressModel.findById(addressId);
+        if (!address) {
+            throw createError.NotFound('Address not found');
+        }
+
+        const addressList = await AddressModel.find({
+            user: userId,
+        });
+        if (!addressList) {
+            throw createError.NotFound('Address list empty');
+        }
+
+        const bulkOps = addressList.map(obj => {
+            return {
+                updateMany: {
+                    filter: {
+                        _id: obj._id,
+                    },
+                    update: {
+                        status: false,
+                    },
+                },
+            };
+        });
+
+        const bulkUpdate = await AddressModel.bulkWrite(bulkOps);
+        if (!bulkUpdate) {
+            throw createError.InternalServerError('Unable to update address');
+        }
+
+        address.status = true;
+        const updateStatus = await address.save();
+
+        if (!updateStatus) {
+            throw createError.InternalServerError('Unable to set address as active');
+        }
+
+        res.status(200).json({
+            success: true,
+            error: false,
+            message: 'Address set as active',
+        });
+    } catch (err) {
+        next(err);
+    }
+}
+
+const deleteAddressController = async (req, res, next) => {
+    try {
+        const userId = req.userId; // from auth middleware
+        const addressId = req.params.id;
+
+        const user = await UserModel.findById(userId);
+        if (!user) {
+            throw createError.NotFound('User not found');
+        }
+
+        const deleteAddress = await AddressModel.findByIdAndDelete(addressId);
+        if (!deleteAddress) {
+            throw createError.InternalServerError('Deletion failed');
+        }
+
+        const updateUser = await UserModel.updateOne({ _id: userId }, {
+            $pullAll: {
+                address: [{ _id: addressId }],
+            },
+        });
+        if (!updateUser) {
+            throw createError.InternalServerError('User update failed');
+        }
+
+        res.status(200).json({
+            success: true,
+            error: false,
+            message: 'Address deleted',
+        });
+    } catch (err) {
+        next(err);
+    }
+}
+
 export {
     addAddressController,
     updateAddressController,
     getAddressController,
     getAllAddressController,
+    toggleActiveAddressController,
+    deleteAddressController,
 }
