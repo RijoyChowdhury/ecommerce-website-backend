@@ -24,7 +24,7 @@ const encryptData = async (data) => {
 
 const registerUserController = async (req, res, next) => {
     try {
-        const { firstName, lastName, email, password } = req.body;
+        const { firstName, lastName, email, password, userPrefix = 'single' } = req.body;
         if (!firstName || !lastName || !email || !password) {
             throw createError.BadRequest('First name, last name, email or password cannot be empty');
         }
@@ -37,6 +37,7 @@ const registerUserController = async (req, res, next) => {
         const hashedPassword = await encryptData(password);
         
         const payload = {
+            userPrefix,
             firstName, 
             lastName,
             email,
@@ -240,7 +241,7 @@ const forgotPasswordController = async (req, res, next) => {
             throw createError.NotFound('User not found');
         }
         const otp = generateVerificationCode();
-        const otp_expiry = Date.now() + 60 * 60 * 1000; // expires in 1 hour
+        const otp_expiry = Date.now() + 10 * 60 * 1000; // expires in 10 mins
 
         const updateUser = await UserModel.findByIdAndUpdate(user._id, {
             otp,
@@ -323,6 +324,53 @@ const resetPasswordController = async (req, res, next) => {
             success: true,
             error: false,
             message: 'Password update successful',
+        });
+    } catch (err) {
+        next(err);
+    }
+}
+
+const resendOtpController = async (req, res, next) => {
+    try {
+        const {email} = req.body;
+
+        if (!email) {
+            throw createError.Conflict('Email cannot be empty');
+        }
+
+        const user = await UserModel.findOne({email});
+        if (!user) {
+            throw createError.NotFound('User not found');
+        }
+
+        const otp = generateVerificationCode();
+        const otp_expiry = Date.now() + 10 * 60 * 1000; // expires in 10 mins
+
+        const updateUser = await UserModel.findByIdAndUpdate(user._id, {
+            otp,
+            otp_expiry,
+        }, {
+            new: true,
+        });
+
+        if (!updateUser) {
+            throw createError.InternalServerError('User update operation failed');
+        }
+
+        // send verification mail
+        // if (email && email !== user.email) {
+        //     const verifyEmail = await sendEmail({
+        //         sendTo: email,
+        //         subject: 'Verify email account',
+        //         text: '',
+        //         html: generateVerificationEmailTemplate(user.name, verificationCode),
+        //     });
+        // }
+
+        res.status(200).json({
+            success: true,
+            error: false,
+            message: 'OTP sent',
         });
     } catch (err) {
         next(err);
@@ -446,6 +494,7 @@ export {
     forgotPasswordController,
     verifyForgotPasswordOtp,
     resetPasswordController,
+    resendOtpController,
     refreshTokenController,
     userDetailsController,
     userAvatarUploadController,

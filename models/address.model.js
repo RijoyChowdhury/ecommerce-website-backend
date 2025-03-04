@@ -9,6 +9,10 @@ const addressSchema = new mongoose.Schema({
         type: String,
         default: '',
     },
+    address_line_3 : {
+        type: String,
+        default: '',
+    },
     city: {
         type: String,
         default: '',

@@ -1,5 +1,10 @@
 import mongoose from "mongoose";
 
+export const UserRoles = {
+    ADMIN: 'Admin',
+    USER: 'User',
+};
+
 const userSchema = new mongoose.Schema({
     userPrefix: {
         type: String,
@@ -93,7 +98,7 @@ const userSchema = new mongoose.Schema({
     // },
     role: {
         type: String,
-        enum: ['Admin', 'User'],
+        enum: Object.values(UserRoles),
         default: 'User',
     },
 }, {
