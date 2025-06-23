@@ -16,8 +16,8 @@ router.get('/getAllProducts', getAllProductsController);
 router.get('/getAll/:id', getAllProductsByCategoryController);
 
 router.post('/create', auth, createProductController);
-router.get('/:id', getProductDetailsController);
-router.post('/:id', updateProductDetailsController);
+router.get('/:id', auth, getProductDetailsController);
+router.post('/:id', auth, updateProductDetailsController);
 router.delete('/:id', auth, deleteProductController);
 
 export default router;
