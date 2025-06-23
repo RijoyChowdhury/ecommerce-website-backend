@@ -34,7 +34,7 @@ router.post('/forgot-password', forgotPasswordController);
 router.post('/verify-forgot-password-otp', verifyForgotPasswordOtp);
 router.post('/reset-password', resetPasswordController);
 
-router.get('/resend-otp', resendOtpController);
+router.post('/resend-otp', resendOtpController);
 router.post('/refresh-token', refreshTokenController);
 
 router.put('/upload-avatar', auth, upload.single('avatar'), userAvatarUploadController);
