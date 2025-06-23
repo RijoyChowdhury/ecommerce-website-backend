@@ -167,22 +167,11 @@ const updateProductDetailsController = async (req, res, next) => {
             throw createError.NotFound('Invalid product id');
         }
 
-        const {
-            name,
-            description,
-            brand,
-            price,
-            oldPrice,
-            discount,
-            categoryId,
-            stockCount,
-            rating,
-            productImages,
-        } = req.body;
-
-        productDetails.name = name;
-
-        const saveDetails = await productDetails.save();
+        const saveDetails = await ProductModel.findByIdAndUpdate(productId, {
+            ...req.body,
+        }, {
+            new: true,
+        });
         if (!saveDetails) {
             throw createError.InternalServerError('Operation failed');
         }
@@ -190,7 +179,6 @@ const updateProductDetailsController = async (req, res, next) => {
         res.status(200).json({
             success: true,
             error: false,
-            data: productDetails,
         });
     } catch (err) {
         next(err);
