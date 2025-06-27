@@ -7,7 +7,7 @@ import {
     uploadCategoryImagesController, 
     getCategoryDetailsController,
     deleteCategoryController,
-    updateCtaegoryController,
+    updateCategoryController,
 } from "../controllers/category.controllers.js";
 
 const router = Router();
@@ -18,6 +18,6 @@ router.post('/create', auth, createCategoryController);
 router.get('/:id', getCategoryDetailsController);
 router.get('/', getCategoryListController);
 router.delete('/:id', auth, deleteCategoryController);
-router.post('/:id', auth, updateCtaegoryController);
+router.post('/:id', auth, updateCategoryController);
 
 export default router;

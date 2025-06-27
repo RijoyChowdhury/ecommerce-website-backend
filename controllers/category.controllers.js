@@ -10,27 +10,6 @@ cloudinary.config({
     secure: true,
 });
 
-// utility function
-const createNestedCategories = (categories, parentId = null) => {
-    const categoryList = new Array();
-    let category;
-    if (parentId === null) {
-        category = categories.filter(cat => cat.parentId === null);
-    } else {
-        category = categories.filter(cat => String(cat.parentId) === String(parentId));
-    }
-
-    for (let cat of category) {
-        categoryList.push({
-            _id: cat._id,
-            name: cat.name,
-            children: createNestedCategories(categories, cat._id),
-        });
-    }
-
-    return categoryList;
-}
-
 // upload images
 let imageArray = new Array();
 const uploadCategoryImagesController = async (req, res, next) => {
@@ -65,24 +44,32 @@ const uploadCategoryImagesController = async (req, res, next) => {
 
 const createCategoryController = async (req, res, next) => {
     try {
-        let {name, parentId} = req.body;
         const category = new CategoryModel({
-            name,
-            parentId,
+            ...req.body,
         });
         if (!category) {
             throw createError.BadRequest('Entry failed');
         }
 
         await category.save();
-        imageArray = new Array();
-        
+        // imageArray = new Array();
+
+        const updateParentCategory = await CategoryModel.updateOne({ _id: category.parentCategory }, {
+            hasSubcategory: true,
+            $push: {
+                subcategories: category._id,
+            }
+        });
+        if (!updateParentCategory) {
+            throw createError.InternalServerError('Updating parent category failed');
+        }
+
         res.status(200).json({
             success: true,
             error: false,
             message: 'Entry added',
             data: category
-        });   
+        });
     } catch (err) {
         next(err);
     }
@@ -90,14 +77,14 @@ const createCategoryController = async (req, res, next) => {
 
 const getCategoryListController = async (req, res, next) => {
     try {
-        const list = await CategoryModel.find();
+        const list = await CategoryModel.find({}, {description: 0});
         if (!list) {
             throw createError.NotFound('No categories found');
         }
         res.status(200).json({
             success: true,
             error: false,
-            data: createNestedCategories(list),
+            data: list,
         });
     } catch (err) {
         next(err);
@@ -106,7 +93,7 @@ const getCategoryListController = async (req, res, next) => {
 
 const getCategoryDetailsController = async (req, res, next) => {
     try {
-        const category = await CategoryModel.findById(req.params.id);
+        const category = await CategoryModel.findById(req.params.id).populate('subcategories', 'name').populate('parentCategory', 'name');
         if (!category) {
             throw createError.NotFound('Invalid category id');
         }
@@ -127,13 +114,29 @@ const deleteCategoryController = async (req, res, next) => {
             throw createError.NotFound('Invalid category id');
         }
 
-        const subCategories = await CategoryModel.find({parentId: req.params.id});
-        for (let category of subCategories) {
-            // deleteCategory(category);
+        const subCategories = await CategoryModel.find({ parentCategory: req.params.id });
+        const parentCategory = await CategoryModel.findById(category.parentCategory);
+        
+        // handle all sub-categories
+        // for (let category of subCategories) {
+        //     // deleteCategory(category);
+        // }
+        if (subCategories && subCategories.length > 0) {
+            throw createError.BadRequest('Operation failed. Cannot delete category with sub-categories present.');
         }
 
         const deleteCategory = await CategoryModel.findByIdAndDelete(req.params.id);
         if (!deleteCategory) {
+            throw createError.BadRequest('Operation failed');
+        }
+
+        // Delete category reference from parent
+        parentCategory.subcategories = parentCategory.subcategories.filter(id => id === category._id);
+        if (parentCategory.subcategories.length === 0) {
+            parentCategory.hasSubcategory = false;
+        }
+        const deleteSubcategory = await parentCategory.save();
+        if (!deleteSubcategory) {
             throw createError.BadRequest('Operation failed');
         }
 
@@ -147,23 +150,27 @@ const deleteCategoryController = async (req, res, next) => {
     }
 }
 
-const updateCtaegoryController = async (req, res, next) => {
+const updateCategoryController = async (req, res, next) => {
     try {
         const category = await CategoryModel.findById(req.params.id);
         if (!category) {
             throw createError.NotFound('Invalid category id');
         }
-        
-        const {name, parentId} = req.body;
-        category.name = name;
-        category.parentId = parentId;
-        await category.save();
+
+        const updateCategoryDetails = await CategoryModel.findByIdAndUpdate(req.params.id, {
+            ...req.body,
+        }, {
+            new: true,
+        });
+        if (!updateCategoryDetails) {
+            throw createError.InternalServerError('Operation failed');
+        }
 
         res.status(200).json({
             success: true,
             error: false,
             message: 'Category updated',
-            data: category,
+            data: updateCategoryDetails,
         });
     } catch (err) {
         next(err);
@@ -176,5 +183,5 @@ export {
     getCategoryListController,
     getCategoryDetailsController,
     deleteCategoryController,
-    updateCtaegoryController,
+    updateCategoryController,
 };

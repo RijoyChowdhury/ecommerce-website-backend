@@ -184,9 +184,17 @@ const categorySchema = new mongoose.Schema({
         required: true,
         trim: true,
     },
+    description: {
+        type: String,
+        required: true,
+    },
     hasSubcategory: {
         type: Boolean,
         default: false,
+    },
+    isTopLevel: {
+        type: Boolean,
+        default: true,
     },
     subcategories: [{
         type: mongoose.Schema.ObjectId,
@@ -195,10 +203,7 @@ const categorySchema = new mongoose.Schema({
     images: [{
         type: String,
     }],
-    parent_name: {
-        type: String,
-    },
-    parentId: {
+    parentCategory: {
         type: mongoose.Schema.ObjectId,
         ref: 'category',
         default: null,
@@ -214,6 +219,14 @@ const categorySchema = new mongoose.Schema({
 // categorySchema.set('toJSON', {
 //     virtuals: true,
 // });
+
+const autoPopulateSubCategories = async function (docs) {
+    for (const doc of docs) {
+        await doc.populate('subcategories', 'name subcategories hasSubcategory');
+    }
+}
+
+categorySchema.post('find', autoPopulateSubCategories);
 
 const CategoryModel = mongoose.model('category', categorySchema);
 
