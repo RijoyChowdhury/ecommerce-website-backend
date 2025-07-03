@@ -3,38 +3,17 @@ import fs from 'fs';
 import { v2 as cloudinary } from 'cloudinary';
 import ProductModel from "../models/product.model.js";
 import CategoryModel from '../models/category.model.js';
+import UserModel from '../models/user.model.js';
 
 const createProductController = async (req, res, next) => {
     try {
-        const {
-            name,
-            description,
-            brand,
-            price,
-            oldPrice,
-            discount,
-            categoryId,
-            stockCount,
-            rating,
-            productImages,
-        } = req.body;
-
-        const category = CategoryModel.findById(categoryId);
+        const category = CategoryModel.findById(req.body.category);
         if (!category) {
             throw createError.NotFound('Invalid category');
         }
 
         const product = new ProductModel({
-            name,
-            description,
-            brand,
-            price,
-            oldPrice: oldPrice ? oldPrice : price,
-            discount,
-            category: categoryId,
-            stockCount,
-            rating,
-            images: productImages,
+            ...req.body
         });
 
         const result = await product.save();
@@ -46,7 +25,6 @@ const createProductController = async (req, res, next) => {
             success: true,
             error: false,
             data: product,
-            role: req.userRole,
         });
     } catch (err) {
         next(err);
@@ -64,7 +42,10 @@ const getAllProductsController = async (req, res, next) => {
         }
 
         const productList = await ProductModel.find()
-            .populate('category')
+            .populate({
+                path: 'category',
+                select: 'name parentCategory',
+            })
             .skip((page - 1) * perPage)
             .limit(perPage)
             .exec();
@@ -144,7 +125,14 @@ const deleteProductController = async (req, res, next) => {
 const getProductDetailsController = async (req, res, next) => {
     try {
         const productId = req.params.id;
-        const productDetails = await ProductModel.findById(productId);
+        const productDetails = await ProductModel.findById(productId).populate({
+            path: 'review',
+            populate: {
+                path: 'user',
+                model: UserModel,
+                select: 'name'
+            }
+        });
         if (!productDetails) {
             throw createError.NotFound('Invalid product id');
         }
@@ -179,6 +167,7 @@ const updateProductDetailsController = async (req, res, next) => {
         res.status(200).json({
             success: true,
             error: false,
+            data: saveDetails,
         });
     } catch (err) {
         next(err);
