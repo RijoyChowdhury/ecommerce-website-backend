@@ -77,7 +77,7 @@ const createCategoryController = async (req, res, next) => {
 
 const getCategoryListController = async (req, res, next) => {
     try {
-        const list = await CategoryModel.find({}, {description: 0});
+        const list = await CategoryModel.find({});
         if (!list) {
             throw createError.NotFound('No categories found');
         }
@@ -131,13 +131,15 @@ const deleteCategoryController = async (req, res, next) => {
         }
 
         // Delete category reference from parent
-        parentCategory.subcategories = parentCategory.subcategories.filter(id => id === category._id);
-        if (parentCategory.subcategories.length === 0) {
-            parentCategory.hasSubcategory = false;
-        }
-        const deleteSubcategory = await parentCategory.save();
-        if (!deleteSubcategory) {
-            throw createError.BadRequest('Operation failed');
+        if (parentCategory) {
+            parentCategory.subcategories = parentCategory.subcategories.filter(id => id === category._id);
+            if (parentCategory.subcategories.length === 0) {
+                parentCategory.hasSubcategory = false;
+            }
+            const deleteSubcategory = await parentCategory.save();
+            if (!deleteSubcategory) {
+                throw createError.BadRequest('Operation failed');
+            }
         }
 
         res.status(200).json({

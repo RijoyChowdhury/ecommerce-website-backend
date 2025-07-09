@@ -222,7 +222,7 @@ const categorySchema = new mongoose.Schema({
 
 const autoPopulateSubCategories = async function (docs) {
     for (const doc of docs) {
-        await doc.populate('subcategories', 'name subcategories hasSubcategory');
+        await doc.populate('subcategories', 'name subcategories hasSubcategory images');
     }
 }
 
