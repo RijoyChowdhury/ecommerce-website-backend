@@ -3,17 +3,17 @@ import upload from "../middleware/multer.middleware.js";
 import { auth } from "../middleware/auth.middleware.js";
 import { 
     createProductController, 
-    getAllProductsByCategoryController, 
     getAllProductsController, 
     deleteProductController,
     getProductDetailsController,
     updateProductDetailsController,
+    getfeaturedProductsController,
 } from "../controllers/product.controllers.js";
 
 const router = Router();
 
 router.get('/getAllProducts', getAllProductsController);
-router.get('/getAll/:id', getAllProductsByCategoryController);
+router.get('/getFeaturedProducts', getfeaturedProductsController);
 
 router.post('/create', auth, createProductController);
 router.get('/:id', getProductDetailsController);
