@@ -4,6 +4,7 @@ import { v2 as cloudinary } from 'cloudinary';
 import ProductModel from "../models/product.model.js";
 import CategoryModel from '../models/category.model.js';
 import UserModel from '../models/user.model.js';
+import mongoose from 'mongoose';
 
 const generateFilterPayload = (queryObject) => {
     const rating = parseFloat(queryObject.rating) || 0.0;
@@ -24,7 +25,7 @@ const generateFilterPayload = (queryObject) => {
     }
 
     if (category) {
-        const categoryIds = category ? category.split(',') : [];
+        const categoryIds = category ? category.split(',').map(id => new mongoose.Types.ObjectId(id)) : [];
         console.log(categoryIds);
         filterPayload.category = { $in: categoryIds };
     }
@@ -81,38 +82,6 @@ const getAllProductsController = async (req, res, next) => {
 
         const filterPayload = generateFilterPayload(req.query);
 
-        const aggregation = (await ProductModel.aggregate([
-            {
-                $match: filterPayload
-            },
-            {
-                $group: {
-                    _id: null,
-                    maxPrice: { $max: "$price" },
-                    minPrice: { $min: "$price" },
-                    totaldocs: { $sum: 1 },
-                },
-            },
-        ]));
-
-        const brandAggregation = (await ProductModel.aggregate([
-            {
-                $match: filterPayload
-            },
-            {
-                $group: {
-                    _id: '$brand',
-                    count: { $sum: 1 },
-                },
-            },
-        ]));
-
-        const { maxPrice = 0, minPrice = 0, totaldocs = 0 } = aggregation[0];
-        const totalPages = Math.ceil(totaldocs / perPage);
-        if (totalPages && page > totalPages) {
-            throw createError.NotFound('Page not found');
-        }
-
         let productList = ProductModel.find(filterPayload)
             .populate({
                 path: 'category',
@@ -140,6 +109,50 @@ const getAllProductsController = async (req, res, next) => {
             throw createError.NotFound('No products found');
         }
 
+        const aggregation = (await ProductModel.aggregate([
+            {
+                $match: filterPayload,
+            },
+            {
+                $group: {
+                    _id: null,
+                    maxPrice: { $max: "$price" },
+                    minPrice: { $min: "$price" },
+                    totaldocs: { $sum: 1 },
+                },
+            },
+        ]));
+
+        const brandAggregation = (await ProductModel.aggregate([
+            {
+                $match: filterPayload
+            },
+            {
+                $group: {
+                    _id: '$brand',
+                    count: { $sum: 1 },
+                },
+            },
+        ]));
+
+        const stockAggregation = (await ProductModel.aggregate([
+            {
+                $match: {...filterPayload, stockCount: {$gt: 0}}
+            },
+            {
+                $count: 'inStock'
+            },
+        ]));
+
+        // const { maxPrice, minPrice, totaldocs } = aggregation[0] ?? {maxPrice: 0, minPrice: 0, totaldocs: 0};
+        const { maxPrice = 0, minPrice = 0, totaldocs = 0 } = aggregation[0] || {};
+        const { inStock = 0 } = stockAggregation[0] || {};
+
+        const totalPages = Math.ceil(totaldocs / perPage);
+        if (totalPages && page > totalPages) {
+            throw createError.NotFound('Page not found');
+        }
+
         res.status(200).json({
             success: true,
             error: false,
@@ -147,6 +160,7 @@ const getAllProductsController = async (req, res, next) => {
             result_metadata: {
                 max_price: maxPrice,
                 min_price: minPrice,
+                in_stock: inStock,
                 total_docs: totaldocs,
                 brands: brandAggregation,
                 current_page: page,
