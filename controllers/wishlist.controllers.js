@@ -1,6 +1,7 @@
 import createError from 'http-errors';
 import WishListProductModel from '../models/wishlist.model.js';
 import UserModel from '../models/user.model.js';
+import mongoose from 'mongoose';
 
 const addItemToWishlistController = async (req, res, next) => {
     try {
@@ -45,16 +46,68 @@ const addItemToWishlistController = async (req, res, next) => {
     }
 }
 
-const getWishlistItemsController = async (req, res, next) => {
+const checkWishlistController = async (req, res, next) => {
     try {
-        const userId = req.userId;
-        const wishlistItems = await WishListProductModel.find({
-            user: userId,
-        }).populate('product');
+        const productId = req.params.id;
+        if (!productId) {
+            throw createError.BadRequest('ProductId cannot be empty');
+        }
+
+        const wishlistItem = await WishListProductModel.findOne({product: productId});
 
         res.status(200).json({
             success: true,
             error: false,
+            data: wishlistItem,
+        });
+    } catch (err) {
+        next(err);
+    }
+}
+
+const getWishlistItemsController = async (req, res, next) => {
+    try {
+        const userId = req.userId;
+        const page = parseInt(req.query.page) || 1;
+        const perPage = parseInt(req.query.perPage) || 10;
+
+        const wishlistItems = await WishListProductModel.find({
+            user: userId,
+        }).populate('product')
+        .sort({ 'createdAt': -1 })
+        .skip((page - 1) * perPage)
+        .limit(perPage)
+        .exec();
+
+        const aggregation = (await WishListProductModel.aggregate([
+            {
+                $match: {
+                    user: new mongoose.Types.ObjectId(userId),
+                },
+            },
+            {
+                $group: {
+                    _id: null,
+                    totaldocs: { $sum: 1 },
+                },
+            },
+        ]));
+
+        const { totaldocs = 0 } = aggregation[0] || {};
+
+        const totalPages = Math.ceil(totaldocs / perPage);
+        if (totalPages && page > totalPages) {
+            throw createError.NotFound('Page not found');
+        }
+
+        res.status(200).json({
+            success: true,
+            error: false,
+            result_metadata: {
+                current_page: page,
+                total_docs: totaldocs,
+                total_pages: totalPages > 0 ? totalPages : 1,
+            },
             data: wishlistItems,
         });
     } catch (err) {
@@ -97,4 +150,5 @@ export {
     addItemToWishlistController,
     getWishlistItemsController,
     deleteWishlistItemController,
+    checkWishlistController,
 };
