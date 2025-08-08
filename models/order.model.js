@@ -10,6 +10,10 @@ const orderSchema = new mongoose.Schema({
         required: [true, 'orderId field cannot be empty'],
         unique: true,
     },
+    invoice_receipt: {
+        type: String,
+        default: '',
+    },
     product: {
         type: mongoose.Schema.ObjectId,
         ref: 'product',
@@ -18,7 +22,7 @@ const orderSchema = new mongoose.Schema({
         name: String,
         image: Array,
     },
-    paymentId: {
+    paymentMode: {
         type: String,
         default: '',
     },
@@ -30,17 +34,9 @@ const orderSchema = new mongoose.Schema({
         type: mongoose.Schema.ObjectId,
         ref: 'address',
     },
-    sub_total_amt: {
-        type: Number,
-        default: 0,
-    },
     total_amt: {
         type: Number,
         default: 0
-    },
-    invoice_receipt: {
-        type: String,
-        default: '',
     },
 }, {
     timestamps: true,
