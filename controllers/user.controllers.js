@@ -35,17 +35,17 @@ const registerUserController = async (req, res, next) => {
 
         const verificationCode = generateVerificationCode();
         const hashedPassword = await encryptData(password);
-        
+
         const payload = {
             userPrefix,
-            firstName, 
+            firstName,
             lastName,
             email,
             password: hashedPassword,
             otp: verificationCode,
             otp_expiry: Date.now() + 10 * 60 * 1000, // expires in 10 mins
         };
-        
+
         const newUser = new UserModel(payload);
         await newUser.save();
 
@@ -73,7 +73,7 @@ const verifyEmailController = async (req, res, next) => {
         if (!user) {
             throw createError.NotFound('User not found');
         }
-        
+
         const isCodeValid = user.otp === otp;
         const isNotExpired = user.otp_expiry > Date.now();
 
@@ -166,7 +166,7 @@ const logoutController = async (req, res, next) => {
 const updateUserDetailsController = async (req, res, next) => {
     try {
         const userId = req.userId; // from auth middleware
-        const {firstName, lastName, email, mobile, password} = req.body;
+        const { firstName, lastName, email, mobile, password } = req.body;
         const user = await UserModel.findById(userId);
 
         if (!user) {
@@ -186,7 +186,7 @@ const updateUserDetailsController = async (req, res, next) => {
         }
 
         await UserModel.findByIdAndUpdate(userId, {
-            firstName, 
+            firstName,
             lastName,
             mobile,
             email,
@@ -235,8 +235,8 @@ const userDetailsController = async (req, res, next) => {
 
 const forgotPasswordController = async (req, res, next) => {
     try {
-        const {email} = req.body;
-        const user = await UserModel.findOne({email});
+        const { email } = req.body;
+        const user = await UserModel.findOne({ email });
         if (!user) {
             throw createError.NotFound('User not found');
         }
@@ -272,13 +272,13 @@ const forgotPasswordController = async (req, res, next) => {
 
 const verifyForgotPasswordOtp = async (req, res, next) => {
     try {
-        const {email, otp} = req.body;
+        const { email, otp } = req.body;
 
         if (!email || !otp) {
             throw createError.Conflict('Email/OTP cannot be empty');
         }
 
-        const user = await UserModel.findOne({email});
+        const user = await UserModel.findOne({ email });
         if (!user) {
             throw createError.NotFound('User not found');
         }
@@ -303,7 +303,7 @@ const verifyForgotPasswordOtp = async (req, res, next) => {
 
 const resetPasswordController = async (req, res, next) => {
     try {
-        const {email, newPassword, confirmPassword} = req.body;
+        const { email, newPassword, confirmPassword } = req.body;
         if (!email || !newPassword || !confirmPassword) {
             throw createError.Conflict('Email/New Password/Confirm Password cannot be empty');
         }
@@ -311,7 +311,7 @@ const resetPasswordController = async (req, res, next) => {
             throw createError.Conflict('New Password and Confirm Password must match');
         }
 
-        const user = await UserModel.findOne({email});
+        const user = await UserModel.findOne({ email });
         if (!user) {
             throw createError.NotFound('User not found');
         }
@@ -332,13 +332,13 @@ const resetPasswordController = async (req, res, next) => {
 
 const resendOtpController = async (req, res, next) => {
     try {
-        const {email} = req.body;
+        const { email } = req.body;
 
         if (!email) {
             throw createError.Conflict('Email cannot be empty');
         }
 
-        const user = await UserModel.findOne({email});
+        const user = await UserModel.findOne({ email });
         if (!user) {
             throw createError.NotFound('User not found');
         }
@@ -471,7 +471,7 @@ const removeImageFromCloudinaryController = async (req, res, next) => {
             if (result) {
                 user.avatar = '';
                 await user.save();
-                
+
                 res.status(200).json({
                     success: true,
                     error: false,
