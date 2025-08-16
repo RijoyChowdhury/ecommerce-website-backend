@@ -109,46 +109,130 @@ const getAllProductsController = async (req, res, next) => {
             throw createError.NotFound('No products found');
         }
 
-        const aggregation = (await ProductModel.aggregate([
+        const [aggregations] = await ProductModel.aggregate([
+            { $match: filterPayload }, // shared initial filters
             {
-                $match: filterPayload,
+                $facet: {
+                    prices: [
+                        {
+                            $group: {
+                                _id: null,
+                                maxPrice: { $max: "$price" },
+                                minPrice: { $min: "$price" },
+                                totalDocs: { $sum: 1 },
+                            }
+                        }
+                    ],
+                    inStockCount: [
+                        {
+                            $match: { stockCount: { $gt: 0 } } // extra filter for stock count
+                        },
+                        {
+                            $count: "inStock"
+                        }
+                    ],
+                    brands: [
+                        {
+                            $group: {
+                                _id: "$brand",
+                                count: { $sum: 1 },
+                            }
+                        }
+                    ],
+                    sizes: [
+                        { $unwind: "$size" },
+                        {
+                            $group: {
+                                _id: "$size",
+                                count: { $sum: 1 }
+                            }
+                        }
+                    ],
+                    colors: [
+                        { $unwind: "$color" },
+                        {
+                            $group: {
+                                _id: "$color",
+                                count: { $sum: 1 }
+                            }
+                        }
+                    ],
+                    conditions: [
+                        { $unwind: "$condition" },
+                        {
+                            $group: {
+                                _id: "$condition",
+                                count: { $sum: 1 }
+                            }
+                        }
+                    ]
+                }
             },
             {
-                $group: {
-                    _id: null,
-                    maxPrice: { $max: "$price" },
-                    minPrice: { $min: "$price" },
-                    totaldocs: { $sum: 1 },
-                },
+                $addFields: {
+                    // Provide default for priceStats 
+                    prices: {
+                        $cond: [
+                            { $gt: [{ $size: "$prices" }, 0] },
+                            { $arrayElemAt: ["$prices", 0] },
+                            { maxPrice: 0, minPrice: 0, totalDocs: 0 }
+                        ]
+                    },
+                    // Provide default for inStockCount
+                    inStockCount: {
+                        $cond: [
+                            { $gt: [{ $size: "$inStockCount" }, 0] },
+                            { $arrayElemAt: ["$inStockCount.inStock", 0] },
+                            0
+                        ]
+                    },
+                    // Optionally defaults for others
+                    brands: {
+                        $cond: [
+                            { $gt: [{ $size: "$brands" }, 0] },
+                            "$brands",
+                            []
+                        ]
+                    },
+                    sizes: {
+                        $cond: [
+                            { $gt: [{ $size: "$sizes" }, 0] },
+                            "$sizes",
+                            []
+                        ]
+                    },
+                    colors: {
+                        $cond: [
+                            { $gt: [{ $size: "$colors" }, 0] },
+                            "$colors",
+                            []
+                        ]
+                    },
+                    conditions: {
+                        $cond: [
+                            { $gt: [{ $size: "$conditions" }, 0] },
+                            "$conditions",
+                            []
+                        ]
+                    }
+                }
             },
-        ]));
+            {
+                $addFields: {
+                    totalPages: {
+                        $cond: [
+                            { $gt: ["$prices.totalDocs", 0] },
+                            { $ceil: { $divide: ["$prices.totalDocs", perPage] } },
+                            1
+                        ]
+                    },
+                    currentPage: page,
+                    totalDocs: "$prices.totalDocs",
+                }
+            }
+        ]);
 
-        const brandAggregation = (await ProductModel.aggregate([
-            {
-                $match: filterPayload
-            },
-            {
-                $group: {
-                    _id: '$brand',
-                    count: { $sum: 1 },
-                },
-            },
-        ]));
-
-        const stockAggregation = (await ProductModel.aggregate([
-            {
-                $match: {...filterPayload, stockCount: {$gt: 0}}
-            },
-            {
-                $count: 'inStock'
-            },
-        ]));
-
-        // const { maxPrice, minPrice, totaldocs } = aggregation[0] ?? {maxPrice: 0, minPrice: 0, totaldocs: 0};
-        const { maxPrice = 0, minPrice = 0, totaldocs = 0 } = aggregation[0] || {};
-        const { inStock = 0 } = stockAggregation[0] || {};
-
-        const totalPages = Math.ceil(totaldocs / perPage);
+        const { totalPages } = aggregations;
         if (totalPages && page > totalPages) {
             throw createError.NotFound('Page not found');
         }
@@ -157,15 +241,7 @@ const getAllProductsController = async (req, res, next) => {
             success: true,
             error: false,
             count: productList.length,
-            result_metadata: {
-                max_price: maxPrice,
-                min_price: minPrice,
-                in_stock: inStock,
-                total_docs: totaldocs,
-                brands: brandAggregation,
-                current_page: page,
-                total_pages: totalPages > 0 ? totalPages : 1,
-            },
+            result_metadata: aggregations,
             data: productList,
         });
     } catch (err) {

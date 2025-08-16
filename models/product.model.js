@@ -69,7 +69,12 @@ const productSchema = new mongoose.Schema({
     review: [{
         type: mongoose.Schema.ObjectId,
         ref: 'review',
-    }]
+    }],
+    condition: {
+        type: String,
+        enum: ['New', 'Refurbished', 'Used'],
+        default: 'New',
+    }
 }, {
     timestamps: true,
 });
