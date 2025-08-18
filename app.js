@@ -5,10 +5,20 @@ import cookieParser from 'cookie-parser';
 import morgan from 'morgan';
 import helmet from 'helmet';
 import createError from 'http-errors';
+import mongoSanitize from 'express-mongo-sanitize';
+import { rateLimit } from 'express-rate-limit';
 import {connectDB} from './utils/connectDB.js';
 import appRouter from './routes/index.js';
 
 dotenv.config();
+
+const limiter = rateLimit({
+	windowMs: 15 * 60 * 1000, // 15 minutes
+	limit: 100, // Limit each IP to 100 requests per `window` (here, per 15 minutes).
+	standardHeaders: 'draft-8', // draft-6: `RateLimit-*` headers; draft-7 & draft-8: combined `RateLimit` header
+	legacyHeaders: false, // Disable the `X-RateLimit-*` headers.
+	ipv6Subnet: 56,
+})
 
 const app = express();
 
@@ -25,6 +35,8 @@ app.use(morgan('combined'));
 app.use(helmet({
     crossOriginResourcePolicy: false
 }));
+app.use(mongoSanitize());
+app.use(limiter);
 
 const PORT = process.env.PORT ?? 3000;
 
