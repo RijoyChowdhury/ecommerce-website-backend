@@ -12,6 +12,7 @@ const generateFilterPayload = (queryObject) => {
     const category = queryObject.category || '';
     const size = queryObject.size || '';
     const color = queryObject.color || '';
+    const condition = queryObject.condition || '';
 
     const price_range = queryObject.price_range || '';
 
@@ -31,16 +32,27 @@ const generateFilterPayload = (queryObject) => {
     }
 
     if (size) {
-        filterPayload.size = size;
+        const sizes = size ? size.split(',') : [];
+        filterPayload.size = { $in: sizes };
     }
 
     if (color) {
-        filterPayload.color = color;
+        const colors = color ? color.split(',') : [];
+        filterPayload.color = { $in: colors };
     }
 
     if (price_range) {
         const [low, high] = price_range ? price_range.split(',') : [];
         filterPayload.price = { $gte: parseInt(low), $lte: parseInt(high) };
+    }
+
+    if (queryObject.notavailable) {
+        filterPayload.stockCount = queryObject.notavailable === 'true' ? {$eq: 0} : {$gt: 0};
+    }
+
+    if (condition) {
+        const conditions = condition ? condition.split(',') : [];
+        filterPayload.condition = { $in: conditions };
     }
 
     return filterPayload;
